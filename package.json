@@ -1,0 +1,19 @@
+{
+  "name": "pong-plus",
+  "version": "0.0.0",
+  "description": "A javascript pong game (and more) for GreatCodeClub Project #1",
+  "main": "web.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tsholmes/pong-plus.git"
+  },
+  "author": "tsholmes",
+  "license": "BSD-2-Clause",
+  "bugs": {
+    "url": "https://github.com/tsholmes/pong-plus/issues"
+  },
+  "homepage": "https://github.com/tsholmes/pong-plus",
+  "dependencies": {
+    "express": "latest"
+  }
+}
