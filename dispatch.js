@@ -7,10 +7,10 @@ function Connection(id, conn, data, close) {
   var t = this;
   this.id = id;
   this.conn = conn;
-  var alive = false;
+  var alive = 5;
   var i = setInterval(function(){
     if (alive) {
-      alive = false;
+      alive--;
       return;
     }
     try {
@@ -18,7 +18,7 @@ function Connection(id, conn, data, close) {
     } catch (e) {}
   },1000);
   conn.on('data', function(d) {
-    alive = true;
+    alive = 5;
     data(t, JSON.parse(d));
   });
   conn.on('close', function() {
