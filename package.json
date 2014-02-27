@@ -14,6 +14,8 @@
   },
   "homepage": "https://github.com/tsholmes/pong-plus",
   "dependencies": {
-    "express": "latest"
+    "express": "latest",
+    "sockjs": "latest",
+    "underscore": "latest"
   }
 }
