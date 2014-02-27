@@ -25,11 +25,34 @@ JSONSock.prototype.close = function() {
     this.sock.close();
 }
 
+function RollingSum(count,def) {
+  this.count = count;
+  this.def = def;
+  this.vals = [];
+  this.sum = 0;
+  this.average = def;
+}
+RollingSum.prototype.add = function(val) {
+  this.vals.push(val);
+  this.sum += val;
+  while (this.vals.length > this.count) {
+    this.sum -= this.vals.shift();
+  }
+  this.average = (this.sum / this.vals.length) | 0;
+}
+RollingSum.prototype.clear = function() {
+  this.sum = 0;
+  this.average = this.def;
+  this.vals = [];
+}
+
 function GameDriver(view,log) {
   var t = this;
   this.view = view;
   this.running = false;
   this.rtt = 100;
+  this.rtts = new RollingSum(10,100);
+  this.exf = 0;
   this.len = 3;
   this.last = +new Date();
   this.lastp = +new Date();
@@ -92,8 +115,7 @@ GameDriver.prototype.setupSocket = function() {
       sock.send({e:"pong",t:d.t});
     } else if (d.e == "pong") { // get ping response
       var dif = +new Date() - d.t;
-      this.rtt = dif;
-      t.log("RTT: " + dif);
+      t.processRTT(dif);
     } else if (d.e == "c") { // partner connected
       t.log("partner connect");
       t.newGame(d.i);
@@ -124,14 +146,21 @@ GameDriver.prototype.newGame = function(i) {
   this.model = new GameModel();
   this.model.ball.states[0].dx = 5 * (-1 + 2 * i);
   this.frame = 0;
-  this.exf = 0;
   this.p1dd = [];
   this.p2dd = [];
   this.running = true;
   this.last = +new Date();
+  this.rtts.clear();
+  this.rtt = 100;
+  this.exf = 0;
 }
 GameDriver.prototype.collectState = function(state) {
   // TODO
+}
+GameDriver.prototype.processRTT = function(rtt) {
+  this.rtts.add(rtt);
+  this.rtt = this.rtts.average;
+  this.log("RTT: " + this.rtt);
 }
 GameDriver.prototype.processDD = function(dd) {
   this.p2dd[dd.frame] = dd.dir;
@@ -144,28 +173,32 @@ GameDriver.prototype.processDD = function(dd) {
   }
 }
 GameDriver.prototype.processSync = function(f) {
-  this.exf = (f + this.rtt / this.len / 2) | 0;
-  this.log("frame lag: " + (this.exf - this.frame));
+  var exf = (f + this.rtt / this.len / 2) | 0;
+  var lag = this.exf - exf;
+  this.log("frame lag: " + lag);
 }
 GameDriver.prototype.tick = function() {
   if (!this.running) return;
-  var drain = Math.min(this.frame - this.exf, 1);
-  while (this.last < +new Date()) {
-    if (--drain < 0) {
-      this.simFrame();
-    }
-    this.last += this.len;
-    this.exf += 1;
+  var df = ((+new Date() - this.last) / this.len) | 0;
+  this.exf += df;
+  var target = this.exf;
+  if (this.model.ball.states[this.frame].dx > 0) {
+    target - (this.rtt / this.len) | 0;
   }
-  if (+new Date() - this.lastp > 1000) {
-    this.lastp += 1000;
+  var run = clamp(target - this.frame, 9, 11);
+  this.last += df * this.len;
+  for (var i = 0; i < run; i++) {
+    this.simFrame();
+  }
+  if (+new Date() - this.lastp > 750) {
+    this.lastp += 750;
     this.sock.send({
       e: "ping",
       t: +new Date()
     });
     this.sock.send({
       e: "sy",
-      f: this.frame
+      f: this.exf
     });
   }
   var s = this.model.getState(this.frame);
