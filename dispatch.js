@@ -7,8 +7,13 @@ function Connection(id, conn, data, close) {
   var t = this;
   this.id = id;
   this.conn = conn;
+  var i = setInterval(function(){
+    try {
+      conn._session.recv.didClose();
+    } catch (e) {}
+  },2000);
   conn.on('data', function(d) { data(t, JSON.parse(d)); });
-  conn.on('close', function() { close(t); });
+  conn.on('close', function() { clearInterval(i); close(t); });
 }
 
 Connection.prototype.send = function(data) {
