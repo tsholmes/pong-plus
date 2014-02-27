@@ -1,10 +1,11 @@
 // pong/driver.js
 
-function JSONSock(prefix) {
+function JSONSock(prefix,log) {
   var t = this;
+  this.log = log;
   var sock = this.sock = new SockJS(prefix);
   sock.onopen = function() {
-    console.log("socket open");
+    log("socket open");
     t.onopen && t.onopen();
   }
   sock.onmessage = function(e) {
@@ -24,13 +25,14 @@ JSONSock.prototype.close = function() {
     this.sock.close();
 }
 
-function GameDriver(view) {
+function GameDriver(view,log) {
   var t = this;
   this.view = view;
   this.running = false;
   this.rtt = 100;
   this.len = 3;
   this.last = +new Date();
+  this.log = log;
 
   this.p1dd = [];
   this.p2dd = [];
@@ -78,7 +80,7 @@ GameDriver.prototype.setupSocket = function() {
   var t = this;
 
   var oldsock = this.sock;
-  var sock = this.sock = new JSONSock("/ws");
+  var sock = this.sock = new JSONSock("/ws",t.log);
   sock.onopen = function() {
 
   }
@@ -90,12 +92,12 @@ GameDriver.prototype.setupSocket = function() {
     } else if (d.e == "pong") { // get ping response
       var dif = +new Date() - d.t;
       this.rtt = dif;
-      console.log("RTT: " + dif);
+      t.log("RTT: " + dif);
     } else if (d.e == "c") { // partner connected
-      console.log("partner connect");
+      t.log("partner connect");
       t.newGame(d.i);
     } else if (d.e == "dc") { // partner disconnect
-      console.log("partner disconnect");
+      t.log("partner disconnect");
       t.running = false;
     } else if (d.e == "s") { // state (TEMP)
       t.collectState(d.s);

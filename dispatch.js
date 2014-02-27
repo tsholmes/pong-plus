@@ -7,13 +7,23 @@ function Connection(id, conn, data, close) {
   var t = this;
   this.id = id;
   this.conn = conn;
+  var alive = false;
   var i = setInterval(function(){
+    if (alive) {
+      alive = false;
+      return;
+    }
     try {
       conn._session.recv.didClose();
     } catch (e) {}
-  },2000);
-  conn.on('data', function(d) { data(t, JSON.parse(d)); });
-  conn.on('close', function() { clearInterval(i); close(t); });
+  },1000);
+  conn.on('data', function(d) {
+    alive = true;
+    data(t, JSON.parse(d));
+  });
+  conn.on('close', function() {
+    clearInterval(i); close(t);
+  });
 }
 
 Connection.prototype.send = function(data) {
