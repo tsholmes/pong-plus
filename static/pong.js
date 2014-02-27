@@ -10,7 +10,7 @@ documentReady(function(){
     var el = document.createElement("div");
     el.class = "msg";
     el.innerHTML = msg;
-    mq.appendChild(el);
+    mq.insertBefore(el, mq.firstChild);
     var op = 200;
     var i = setInterval(function(){
       op -= 1;

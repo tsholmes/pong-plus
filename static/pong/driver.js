@@ -32,6 +32,7 @@ function GameDriver(view,log) {
   this.rtt = 100;
   this.len = 3;
   this.last = +new Date();
+  this.lastp = +new Date();
   this.log = log;
 
   this.p1dd = [];
@@ -103,6 +104,8 @@ GameDriver.prototype.setupSocket = function() {
       t.collectState(d.s);
     } else if (d.e == "dd") {
       t.processDD(d.dd);
+    } else if (d.e == "sy") {
+      t.processSync(d.f);
     }
   }
   sock.onclose = function() {
@@ -121,6 +124,7 @@ GameDriver.prototype.newGame = function(i) {
   this.model = new GameModel();
   this.model.ball.states[0].dx = 5 * (-1 + 2 * i);
   this.frame = 0;
+  this.exf = 0;
   this.p1dd = [];
   this.p2dd = [];
   this.running = true;
@@ -139,11 +143,30 @@ GameDriver.prototype.processDD = function(dd) {
     }
   }
 }
+GameDriver.prototype.processSync = function(f) {
+  this.exf = (f + this.rtt / this.len / 2) | 0;
+  this.log("frame lag: " + (this.exf - this.frame));
+}
 GameDriver.prototype.tick = function() {
   if (!this.running) return;
+  var drain = Math.min(this.frame - this.exf, 1);
   while (this.last < +new Date()) {
-    this.simFrame();
+    if (--drain < 0) {
+      this.simFrame();
+    }
     this.last += this.len;
+    this.exf += 1;
+  }
+  if (+new Date() - this.lastp > 1000) {
+    this.lastp += 1000;
+    this.sock.send({
+      e: "ping",
+      t: +new Date()
+    });
+    this.sock.send({
+      e: "sy",
+      f: this.frame
+    });
   }
   var s = this.model.getState(this.frame);
   this.view.setState(s);
